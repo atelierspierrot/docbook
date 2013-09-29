@@ -3,14 +3,14 @@
  * PHP/Apache/Markdown DocBook
  * @package     DocBook
  * @license     GPL-v3
- * @link        https://github.com/atelierspierrot/docbook
+ * @link        http://github.com/atelierspierrot/docbook
  */
 
 namespace DocBook;
 
-use DocBook\FrontController;
+use \DocBook\FrontController;
 
-use Library\Helper\Directory as DirectoryHelper;
+use \Library\Helper\Directory as DirectoryHelper;
 
 /**
  */
@@ -72,9 +72,12 @@ class Locator
         $file_path = DirectoryHelper::slashDirname($base_path).$filename;
         
         // user first
-        $user_file_path = DirectoryHelper::slashDirname($docbook->getPath('user_dir')).$file_path;
-        if (file_exists($user_file_path)) {
-            return $user_file_path;
+        $user_path = $docbook->getPath('user_dir');
+        if (!empty($user_path)) {
+            $user_file_path = DirectoryHelper::slashDirname($docbook->getPath('user_dir')).$file_path;
+            if (file_exists($user_file_path)) {
+                return $user_file_path;
+            }
         }
 
         // default

@@ -3,21 +3,22 @@
  * PHP/Apache/Markdown DocBook
  * @package     DocBook
  * @license     GPL-v3
- * @link        https://github.com/atelierspierrot/docbook
+ * @link        http://github.com/atelierspierrot/docbook
  */
 
 namespace DocBook;
 
-use DocBook\FrontController,
-    DocBook\Helper,
-    DocBook\NotFoundException;
+use \DocBook\FrontController,
+    \DocBook\Helper,
+    \DocBook\NotFoundException;
 
-use Library\Helper\Directory as DirectoryHelper,
-    Library\HttpFundamental\Request as BaseRequest;
+use \Library\Helper\Directory as DirectoryHelper,
+    \Library\HttpFundamental\Request as BaseRequest;
 
 /**
  */
-class Request extends BaseRequest
+class Request
+    extends BaseRequest
 {
 
     protected $routing = array();
@@ -50,13 +51,14 @@ class Request extends BaseRequest
 
     public function parseDocBookRequest()
     {
-        $server_pathtrans = $_SERVER['PATH_TRANSLATED'];
+        $server_pathtrans = isset($_SERVER['PATH_TRANSLATED']) ? $_SERVER['PATH_TRANSLATED'] : null;
         $server_uri = $_SERVER['REQUEST_URI'];
         $server_query = $_SERVER['QUERY_STRING'];
-        $server_argv = $_SERVER['argv'];
+        $server_argv = isset($_SERVER['argv']) ? $_SERVER['argv'] : null;
         $docbook = FrontController::getInstance();
         $locator = new Locator;
         $file = $path = $action = null;
+        $args = array();
 
 /*
 echo '<br />server_pathtrans: '.var_export($server_pathtrans,1);
@@ -64,7 +66,7 @@ echo '<br />server_uri: '.var_export($server_uri,1);
 echo '<br />server_query: '.var_export($server_query,1);
 echo '<br />server_argv: '.var_export($server_argv,1);
 */
-
+ 
         // first: request path from URL
         if (!empty($server_query)) {
             $req = $server_query;
@@ -149,13 +151,47 @@ echo '<br />server_argv: '.var_export($server_argv,1);
         } else {
             $docbook->setInputPath('/');
         }
-        $docbook->setAction(!empty($action) ? $action : 'default');
+        
+//echo '<br />intermediate action: '.var_export($action,1);
+        // if GET args in action
+        if (!empty($action) && substr($action, 0, 1)==='?') {
+            $action = substr($action, 1);
+            parse_str($action, $action_str_args);
+            if (!empty($action_str_args)) {
+                $args = array_merge($args, $action_str_args);
+            }
+            $action = null;
+        } 
+/*
+        // if PHP GET args
+        if (!empty($_GET)) {
+            $args = array_merge($args, $_GET);
+        }
+*/
+        // if GET args from diff( uri-query )
+//echo '<br />diif?: '.var_export(substr_count($server_uri, $server_query),1);
+        if (0<substr_count($server_uri, $server_query)) {
+            $uri_diff = trim(str_replace($server_query, '', $server_uri), '/');
+            if (!empty($uri_diff)) {
+                if (substr($uri_diff, 0, 1)==='?') $uri_diff = substr($uri_diff, 1);
+                parse_str($uri_diff, $uri_diff_args);
+                if (!empty($uri_diff_args)) {
+                    $args = array_merge($args, $uri_diff_args);
+                }
+            }
+        }
 
+        if (!empty($args)) {
+            $docbook->setQuery($args);
+        }
+
+        $docbook->setAction(!empty($action) ? $action : 'default');
 /*
 echo '<br />file: '.var_export($docbook->getInputFile(),1);
 echo '<br />path: '.var_export($docbook->getInputPath(),1);
 echo '<br />action: '.var_export($docbook->getAction(),1);
-exit('yo');
+echo '<br />arguments: '.var_export($docbook->getQuery(),1);
+//exit('yo');
 */
         return $this;
     }

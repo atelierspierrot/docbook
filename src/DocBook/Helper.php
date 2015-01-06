@@ -1,30 +1,52 @@
 <?php
 /**
- * PHP/Apache/Markdown DocBook
- * @package     DocBook
- * @license     GPL-v3
- * @link        http://github.com/atelierspierrot/docbook
+ * This file is part of the DocBook package.
+ *
+ * Copyleft (ↄ) 2008-2015 Pierre Cassat <me@e-piwi.fr> and contributors
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * The source code of this package is available online at 
+ * <http://github.com/atelierspierrot/docbook>.
  */
 
 namespace DocBook;
 
-use \DocBook\DocBookException,
-    \DocBook\DocBookRuntimeException,
-    \DocBook\FrontController;
-
-use \Library\Command,
-    \Library\Helper\Directory as DirectoryHelper,
-    \Library\Helper\Url as UrlHelper;
-
-use \DateTime,
-    \ReflectionMethod;
-
+use \Library\Command;
+use \Library\Helper\Directory as DirectoryHelper;
+use \Library\Helper\Text as TextHelper;
+use \Library\Helper\Url as UrlHelper;
+use \DateTime;
+use \ReflectionMethod;
 use \WebFilesystem\WebFilesystem;
 
 /**
  */
 class Helper
 {
+
+    public static function log($message, $level = 'debug', array $context = array(), $logname = null)
+    {
+        FrontController::getInstance()->log($message, $level, $context, $logname);
+    }
+
+    public static function getSafeIdString($string)
+    {
+        return TextHelper::stripSpecialChars(
+            TextHelper::slugify($string), '-_'
+        );
+    }
 
     public static function getSlug($string)
     {
@@ -62,6 +84,20 @@ class Helper
     {
         $docbook = FrontController::getInstance();
         return str_replace($docbook->getPath('base_dir_http'), '', $path);
+    }
+
+    public static function getAbsolutePath($path)
+    {
+        $docbook = FrontController::getInstance();
+        return $docbook->getPath('base_dir_http').str_replace($docbook->getPath('base_dir_http'), '', $path);
+    }
+
+    public static function getAbsoluteRoute($path)
+    {
+        $url = UrlHelper::parse(UrlHelper::getRequestUrl());
+        $url['path'] = self::getRelativePath(self::getRoute($path));
+        $url['params'] = array();
+        return UrlHelper::build($url);
     }
 
     public static function ensureDirectoryExists($directory)
@@ -111,7 +147,8 @@ class Helper
 
         if ($stdout && !$status) {
             $result = explode(' ', $stdout);
-            return WebFilesystem::getTransformedFilesize(1024*array_shift($result));
+            return (1024*array_shift($result));
+//            return WebFilesystem::getTransformedFilesize(1024*array_shift($result));
         }
         return 0;
     }
@@ -153,6 +190,7 @@ class Helper
         $command = $grep_cmd.' -rn -A 2 -B 2'
             .($is_dir ? ' --include="*.md"' : '')
             .' "'.$regexp.'" '.$path;
+        self::log('Running command: '.$command);
         list($stdout, $status, $stderr) = $docbook->getTerminal()->run($command, $path);
 
         if ($status) return null;
@@ -180,6 +218,14 @@ class Helper
                 );
             }
         }
+        if (!empty($result)) {
+            foreach ($result as $_ind=>$_val) {
+                if (!is_string($_ind)) {
+                    unset($result[$_ind]);
+                }
+            }
+            $result = array_filter($result);
+        }
         return $result;
     }
 
@@ -191,7 +237,8 @@ class Helper
         $command = $wc_cmd.' -l '.$path;
         list($stdout, $status, $stderr) = $docbook->getTerminal()->run($command, $path);
 
-        $lines = array_shift(explode(' ', trim($stdout)));
+        $parts = explode(' ', trim($stdout));
+        $lines = array_shift($parts);
         return !empty($lines) ? $lines : 0;
     }
 
@@ -201,13 +248,13 @@ class Helper
         return array(
             'date'              => new DateTime(),
             'timezone'          => date_default_timezone_get(),
-			'php_uname'         => php_uname(),
-			'php_version'       => phpversion(),
-			'php_sapi_name'     => php_sapi_name(),
-			'apache_version'    => apache_get_version(),
-			'user_agent'        => $_SERVER['HTTP_USER_AGENT'],
-			'git_clone'         => DirectoryHelper::isGitClone($docbook->getPath('root_dir')),
-			'request'           => UrlHelper::getRequestUrl(),
+            'php_uname'         => php_uname(),
+            'php_version'       => phpversion(),
+            'php_sapi_name'     => php_sapi_name(),
+            'apache_version'    => function_exists('apache_get_version') ? apache_get_version() : '?',
+            'user_agent'        => $_SERVER['HTTP_USER_AGENT'],
+            'git_clone'         => DirectoryHelper::isGitClone($docbook->getPath('root_dir')),
+            'request'           => UrlHelper::getRequestUrl(),
         );
     }
 
@@ -248,6 +295,59 @@ class Helper
             }
         }
         return null;
+    }
+
+    public static function rssEncode($str, $cut = 800)
+    {
+        $str = preg_replace(',<h1(.*)</h1>,i', '', $str);
+        $str = TextHelper::cut($str, $cut);
+        return $str;
+    }
+
+    public static function getFlatDirscans($dirscan, $order_by_date = false)
+    {
+        $new_dirscan = $dirscan;
+        if (isset($dirscan['dirscan']) && !empty($dirscan['dirscan']) && is_array($dirscan['dirscan'])) {
+            foreach ($dirscan['dirscan'] as $i=>$val) {
+                if (isset($val['dirscan']) && !empty($val['dirscan']) && is_array($val['dirscan'])) {
+                    $sub_dirscan = $val['dirscan'];
+                    self::getFlatDirscans($sub_dirscan);
+                    self::_addDirscan($new_dirscan, $sub_dirscan);
+                }
+            }
+        }
+
+        if ($order_by_date) {
+            usort($new_dirscan['dirscan'], "self::_cmpDirscan");
+        }
+
+        return $new_dirscan;
+    }
+
+    protected static function _addDirscan(&$dirscan, array $add)
+    {
+        foreach ($add as $index=>$val) {
+            $_ind = isset($dirscan['dirscan'][$index]) ? $index.uniqid() : $index;
+            $dirscan['dirscan'][$_ind] = $val;
+        }
+    }
+
+    protected static function _cmpDirscan($a, $b)
+    {
+        return strcmp($a['mtime']->getTimestamp(), $b['mtime']->getTimestamp());
+    }
+
+    public static function getIcon($type = null, $class = '')
+    {
+        if (!empty($type)) {
+            $docbook = FrontController::getInstance();
+            $icons = $docbook->getRegistry()->get('icons', array(), 'docbook');
+            return '<span class="glyphicon glyphicon-'
+                .(isset($icons[$type]) ? $icons[$type] : $icons['default'])
+                .(!empty($class) ? ' '.$class : '')
+                .'"></span>';
+        }
+        return '';
     }
 
 }

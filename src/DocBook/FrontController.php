@@ -1,28 +1,37 @@
 <?php
 /**
- * PHP/Apache/Markdown DocBook
- * @package     DocBook
- * @license     GPL-v3
- * @link        http://github.com/atelierspierrot/docbook
+ * This file is part of the DocBook package.
+ *
+ * Copyleft (ↄ) 2008-2015 Pierre Cassat <me@e-piwi.fr> and contributors
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * The source code of this package is available online at 
+ * <http://github.com/atelierspierrot/docbook>.
  */
 
 namespace DocBook;
 
-use \DocBook\Abstracts\AbstractFrontController,
-    \DocBook\Abstracts\AbstractPage,
-    \DocBook\Locator,
-    \DocBook\NotFoundException,
-    \DocBook\DocBookException,
-    \DocBook\DocBookRuntimeException,
-    \DocBook\WebFilesystem\DocBookRecursiveDirectoryIterator;
-
+use \DocBook\Abstracts\AbstractFrontController;
+use \DocBook\Abstracts\AbstractPage;
+use \DocBook\WebFilesystem\DocBookRecursiveDirectoryIterator;
 use \MarkdownExtended\MarkdownExtended;
-
-use \I18n\I18n,
-    \I18n\Loader as I18n_Loader,
-    \I18n\Twig\I18nExtension as I18n_Twig_Extension;
-
+use \I18n\I18n;
+use \I18n\Loader as I18n_Loader;
+use \I18n\Twig\I18nExtension as I18n_Twig_Extension;
 use \Library\Helper\Directory as DirectoryHelper;
+use \Library\Logger;
 
 /**
  */
@@ -52,6 +61,7 @@ class FrontController
     protected $uri;
     protected $action;
     protected $markdown_parser;
+    protected $logger;
 
     protected function __construct()
     {
@@ -76,6 +86,9 @@ class FrontController
         Helper::ensureDirectoryExists($base_dir.'tmp/i18n/');
         $this->addPath('i18n', $base_dir.'tmp/i18n/');
 
+        Helper::ensureDirectoryExists($base_dir.'tmp/log/');
+        $this->addPath('logs', $base_dir.'tmp/log/');
+
         $this->addPath('base_templates', $src_dir.self::TEMPLATES_DIR);
 
         if (file_exists($base_dir.self::USER_DIR)) {
@@ -97,13 +110,19 @@ class FrontController
             );
         }
 
+        // the logger
+        $this->logger = new Logger(array_merge(
+            array('directory'=>$this->getPath('logs')),
+            $this->registry->get('logger', array(), 'docbook')
+        ));
+
         // the actual manifest
         $this->registry->setConfig('manifest', json_decode(file_get_contents($this->getPath('app_manifest')), true));
 
         // the markdown config (not required)
         $emd_cfgfile = $this->locator->fallbackFinder(self::MARKDOWN_CONFIG, 'config');
         if (!empty($emd_cfgfile)) {
-            $this->registry->setConfig('emd', parse_ini_file($emd_cfgfile, true));
+            $this->registry->setConfig('markdown', parse_ini_file($emd_cfgfile, true));
         }
 
         // creating the application default headers
@@ -211,7 +230,6 @@ class FrontController
             $full_params['profiler'] = Helper::getProfiler();
         }
         $full_content = $this->getTemplateBuilder()->render($template, $full_params);
-
         if (Request::isAjax()) {
             $this->response->setContentType('json', true);
             $full_content = array_merge($params, array('body' => $full_content));
@@ -315,6 +333,7 @@ var_export($langs);
     public function setQuery(array $uri)
     {
         $this->uri = $uri;
+        $this->getRequest()->setArguments($this->uri);
         return $this;
     }
     
@@ -344,14 +363,13 @@ var_export($langs);
     {
         if (empty($this->markdown_parser)) {
             // creating the Markdown parser
-            $emd_config = $this->registry->getConfig('emd', array());
+            $emd_config = $this->registry->getConfig('markdown', array(), 'docbook');
+            $emd_config_strs = $this->registry->getConfig('markdown_i18n', array(), 'docbook');
+            if (!empty($emd_config_strs) && is_array($emd_config_strs) && count($emd_config_strs)==1 && isset($emd_config_strs['markdown_i18n'])) {
+                $emd_config_strs = $emd_config_strs['markdown_i18n'];
+            }
             if (empty($emd_config)) $emd_config = array();
             $translator = I18n::getInstance();
-            $emd_config_strs = array(
-                'link_mask_title', 'mailto_mask_title', 'fn_link_title',
-                'fn_backlink_title', 'fng_link_title', 'fng_backlink_title',
-                'fnc_link_title', 'fnc_backlink_title'
-            );
             foreach ($emd_config_strs as $_str) {
                 $emd_config[$_str] = $translator->translate($_str);
             }
@@ -392,6 +410,11 @@ var_export($langs);
         var_dump($this);
         echo '</pre>';
         exit(0);
+    }
+
+    public function log($message, $level = 'debug', array $context = array(), $logname = null)
+    {
+        $this->logger->log($level, $message, $context, $logname);
     }
 
 }

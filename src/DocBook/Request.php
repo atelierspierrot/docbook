@@ -1,19 +1,30 @@
 <?php
 /**
- * PHP/Apache/Markdown DocBook
- * @package     DocBook
- * @license     GPL-v3
- * @link        http://github.com/atelierspierrot/docbook
+ * This file is part of the DocBook package.
+ *
+ * Copyleft (ↄ) 2008-2015 Pierre Cassat <me@e-piwi.fr> and contributors
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * The source code of this package is available online at 
+ * <http://github.com/atelierspierrot/docbook>.
  */
 
 namespace DocBook;
 
-use \DocBook\FrontController,
-    \DocBook\Helper,
-    \DocBook\NotFoundException;
-
-use \Library\Helper\Directory as DirectoryHelper,
-    \Library\HttpFundamental\Request as BaseRequest;
+use \Library\Helper\Directory as DirectoryHelper;
+use \Library\HttpFundamental\Request as BaseRequest;
 
 /**
  */
@@ -60,13 +71,12 @@ class Request
         $file = $path = $action = null;
         $args = array();
 
-/*
+/*/
 echo '<br />server_pathtrans: '.var_export($server_pathtrans,1);
 echo '<br />server_uri: '.var_export($server_uri,1);
 echo '<br />server_query: '.var_export($server_query,1);
 echo '<br />server_argv: '.var_export($server_argv,1);
-*/
- 
+//*/ 
         // first: request path from URL
         if (!empty($server_query)) {
             $req = $server_query;
@@ -154,22 +164,22 @@ echo '<br />server_argv: '.var_export($server_argv,1);
         
 //echo '<br />intermediate action: '.var_export($action,1);
         // if GET args in action
-        if (!empty($action) && substr($action, 0, 1)==='?') {
-            $action = substr($action, 1);
-            parse_str($action, $action_str_args);
+        if (!empty($action) && strpos($action, '?')!==false) {
+            $action_new = substr($action, 0, strpos($action, '?'));
+            $action_args = substr($action, strpos($action, '?')+1);
+            parse_str($action_args, $action_str_args);
             if (!empty($action_str_args)) {
                 $args = array_merge($args, $action_str_args);
             }
-            $action = null;
+            $action = $action_new;
         } 
-/*
+
         // if PHP GET args
         if (!empty($_GET)) {
             $args = array_merge($args, $_GET);
         }
-*/
+
         // if GET args from diff( uri-query )
-//echo '<br />diif?: '.var_export(substr_count($server_uri, $server_query),1);
         if (0<substr_count($server_uri, $server_query)) {
             $uri_diff = trim(str_replace($server_query, '', $server_uri), '/');
             if (!empty($uri_diff)) {
@@ -191,7 +201,8 @@ echo '<br />file: '.var_export($docbook->getInputFile(),1);
 echo '<br />path: '.var_export($docbook->getInputPath(),1);
 echo '<br />action: '.var_export($docbook->getAction(),1);
 echo '<br />arguments: '.var_export($docbook->getQuery(),1);
-//exit('yo');
+var_dump($this);
+exit('yo');
 */
         return $this;
     }

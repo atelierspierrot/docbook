@@ -1,3 +1,25 @@
+{#
+This file is part of the DocBook package.
+
+Copyleft (ↄ) 2008-2015 Pierre Cassat <me@e-piwi.fr> and contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+The source code of this package is available online at 
+<http://github.com/atelierspierrot/docbook>.
+#}
+
 {% extends DB.getTemplate('page_layout') %}
 
 {% block title %}{{ title }}{% endblock %}
@@ -9,13 +31,9 @@
 {% block body_attributes %}data-spy="scroll" data-target="#inpage_menu" data-offset="80"{% endblock %}
 
 {% block body %}
-    <div class="navbar navbar-inverse navbar-fixed-top hidden-printer">
-        <div class="navbar-inner">
 {% include DB.getTemplate('navbar') %}
-        </div>
-    </div>
-    <div class="container-fluid">
-        <div class="row-fluid">
+    <div class="container">
+        <div class="row">
 {% include DB.getTemplate('ltie7_warning') %}
 {% include DB.getTemplate('breadcrumbs') %}
 {{ content|raw }}
@@ -30,15 +48,23 @@
 <script src="{{ vendor_assets }}jquery.tablesorter/jquery.tablesorter.min.js"></script>
 <script>
 $(function() {
-    initTables();
     initHighlighted('pre.code');
     initTablesorter('table.tablesorter');
-    $('.tooltips').tooltip();
     initInpageNavigation();
     getToHash();
-    initSearchFiled()
+    initSearchField()
     initScrollTo();
-    initTablesorter('table.indextable', {headers:{0:{sorter:false}}});
+    initTablesorter('table.indextable', {
+        textExtraction: function(n){ 
+            var data = $(n).attr('data-type');
+            return (data!==undefined ? data : $(n).text());
+        }
+    });
+
+
+    $('section.section').scrollspy({ target: '.navbar-section' })
+
+
 });
 </script>
 {% endblock %}

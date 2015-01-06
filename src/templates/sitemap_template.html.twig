@@ -1,0 +1,52 @@
+{#
+This file is part of the DocBook package.
+
+Copyleft (ↄ) 2008-2015 Pierre Cassat <me@e-piwi.fr> and contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+The source code of this package is available online at 
+<http://github.com/atelierspierrot/docbook>.
+#}
+
+{% macro urlitem(path, changefreq, priority) %}
+   <url>
+      <loc>{{ path.path|absoluteRoute }}</loc>
+      <lastmod>{{ datify(path.mtime, 'Y-M-d') }}</lastmod>
+      <changefreq>{{ changefreq }}</changefreq>
+      <priority>{{ priority }}</priority>
+   </url>
+{% endmacro %}
+{% import _self as macros %}
+<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"
+    xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+{%- if page is not empty -%}
+    {{- macros.urlitem(page, 'weekly', '1.0') -}}
+{%- endif -%}
+
+{%- for _path in contents.dirscan -%}
+    {%- if _path.type == 'directory' -%}
+        {{- macros.urlitem(_path, 'weekly', '0.9') -}}
+    {%- elseif _path.type == 'image' -%}
+        {{- macros.urlitem(_path, 'monthly', '0.7') -}}
+    {%- elseif _path.type == 'markdown' -%}
+        {{- macros.urlitem(_path, 'monthly', '0.8') -}}
+    {%- else -%}
+        {{- macros.urlitem(_path, 'monthly', '0.8') -}}
+    {%- endif -%}
+{%- endfor -%}
+
+</urlset>

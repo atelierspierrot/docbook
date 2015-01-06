@@ -1,0 +1,34 @@
+{#
+This file is part of the DocBook package.
+
+Copyleft (ↄ) 2008-2015 Pierre Cassat <me@e-piwi.fr> and contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+The source code of this package is available online at 
+<http://github.com/atelierspierrot/docbook>.
+#}
+<form class="form-search" method="get" action="{{ page.path|route('search') }}">
+    {% if search_str is not empty %}<span class="glyphicon glyphicon-remove-circle" id="delete-search" title="{{ 'Clear the search field'|translate }}" onclick="updateClass(this, 'icon-indicator', 'glyphicon glyphicon-remove-circle')"></span>{% endif %}
+    <div class="input-group">
+        <input type="text" class="form-control search-query searchField {% if search_str is not empty %}searchFieldDeletable{% endif %}" data-toggle="tooltip" name="s" title="{{ 'You can build your search string with regular expressions'|translate }}" placeholder="{{ 'search'|translate }}" value="{{ search_str|default('') }}" tabindex="1" />
+        <span class="input-group-btn">
+            <button id="form-search-submit" type="submit" class="btn btn-default" data-toggle="tooltip" title="{% if search_str is not empty %}
+                {{- 'Update current search'|translate -}}
+            {% else %}
+                {{- 'Start the search'|translate -}}
+            {% endif %}"><span class="glyphicon glyphicon-search"></span></button>
+        </span>
+    </div>
+</form>

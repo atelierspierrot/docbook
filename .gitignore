@@ -11,10 +11,11 @@ composer.lock
 build/*
 
 # Web
-/www/*
-!/www/docbook_assets
-!/www/.htaccess
-!/www/index.php
+www/*
+!www/docbook_assets
+!www/.htaccess
+!www/index.php
+!www/INDEX.md
 
 # Hack
 !.gitkeep
